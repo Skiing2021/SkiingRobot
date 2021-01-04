@@ -1,6 +1,6 @@
 # EC Board Firmware For AI Skiing Robot
 ## Specifications
-* This firmware is designed for RoboMaster Development Board Type A __(MCU: STM32F427IIHx)__ platform.  
+* This firmware is designed for RoboMaster Development Board Type A __(MCU: STM32F427IIHx)__.  
   Technically, it's possible to use it on any generic STM32F427IIHx platform.
 * Implemented Features:  
   * 8-way PWM output via `TIM2`, `TIM4`, `TIM5` and `TIM8`
