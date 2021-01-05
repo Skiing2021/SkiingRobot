@@ -2,31 +2,39 @@
 // Created by caesarw on 11/14/20.
 //
 
-#include "dr16_dbus_rc.h"
+#include "dbus_rc.h"
 
 volatile unsigned char Remote_RX_Buffer[25];
 NDJ6_Controller My_Remote;
 
+/* ----------------------- Function Implements  ---------------------------- */
+
+/******************************************************************************
+ * @brief   configure STM32 USART2 port
+ * -   USART Parameters
+ * -   100Kbps
+ * -   8-N-1
+ * -   DMA Mode
+ * @return  None.
+ * @note    This code is fully tested on STM32F405RGT6 Platform, You can port it to other platform.
+ */
+
 void RC_Init(void) {
 /* -------------- Enable Module Clock Source ----------------------------*/
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_DMA1, ENABLE);
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
     GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_USART1);
 
     /* -------------- Configure GPIO ---------------------------------------*/
     {
         GPIO_InitTypeDef GPIO_InitStructure;
+        USART_InitTypeDef USART_InitStructure;
         GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
         GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
         GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
         GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
         GPIO_Init(GPIOB, &GPIO_InitStructure);
-    }
-
-    {
-        USART_InitTypeDef USART_InitStructure;
         USART_DeInit(USART1);
         USART_InitStructure.USART_BaudRate = 100000;
         USART_InitStructure.USART_WordLength = USART_WordLength_8b;
@@ -35,14 +43,14 @@ void RC_Init(void) {
         USART_InitStructure.USART_Mode = USART_Mode_Rx;
         USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
         USART_Init(USART1, &USART_InitStructure);
-        USART_DMACmd(USART1, USART_DMAReq_Rx, ENABLE);
         USART_Cmd(USART1, ENABLE);
+        USART_DMACmd(USART1, USART_DMAReq_Rx, ENABLE);
     }
 
     /* -------------- Configure NVIC  ---------------------------------------*/
     {
         NVIC_InitTypeDef NVIC_InitStructure;
-        NVIC_InitStructure.NVIC_IRQChannel = DMA2_Stream2_IRQn;
+        NVIC_InitStructure.NVIC_IRQChannel = DMA1_Stream5_IRQn;
         NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
         NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
         NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
@@ -52,7 +60,7 @@ void RC_Init(void) {
     /* -------------- Configure DMA -----------------------------------------*/
     {
         DMA_InitTypeDef DMA_InitStructure;
-        DMA_DeInit(DMA2_Stream2);
+        DMA_DeInit(DMA1_Stream5);
         DMA_InitStructure.DMA_Channel = DMA_Channel_4;
         DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t) & (USART1->DR);
         DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t) Remote_RX_Buffer;
@@ -67,18 +75,17 @@ void RC_Init(void) {
         DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
         DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull;
         DMA_InitStructure.DMA_MemoryBurst = DMA_Mode_Normal;
-//        DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
         DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-        DMA_Init(DMA2_Stream2, &DMA_InitStructure);
-        DMA_ITConfig(DMA2_Stream2, DMA_IT_TC, ENABLE);
-        DMA_Cmd(DMA2_Stream2, ENABLE);
+        DMA_Init(DMA1_Stream5, &DMA_InitStructure);
+        DMA_ITConfig(DMA1_Stream5, DMA_IT_TC, ENABLE);
+        DMA_Cmd(DMA1_Stream5, ENABLE);
     }
 }
 
-void DMA2_Stream2_IRQHandler(void) {
-    if ( DMA_GetITStatus(DMA2_Stream2, DMA_IT_TCIF2) ) {
-        DMA_ClearFlag(DMA2_Stream2, DMA_FLAG_TCIF2);
-        DMA_ClearITPendingBit(DMA2_Stream2, DMA_IT_TCIF2);
+void DMA1_Stream5_IRQHandler(void) {
+    if ( DMA_GetITStatus(DMA1_Stream5, DMA_IT_TCIF5) ) {
+        DMA_ClearFlag(DMA1_Stream5, DMA_FLAG_TCIF5);
+        DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
 
         // Decoding inputs from raw data
         My_Remote.Joystick.Channel_0 = (Remote_RX_Buffer[0] | (Remote_RX_Buffer[1] << 8)) & 0x07ff;             //!< Channel 0
@@ -95,7 +102,7 @@ void DMA2_Stream2_IRQHandler(void) {
         My_Remote.Mouse.R_Down = Remote_RX_Buffer[13];                                                          //!< Mouse Right Is Press ?
         My_Remote.Keyboard.Key_Value = Remote_RX_Buffer[14] | (Remote_RX_Buffer[15] << 8);                      //!< Keyboard value
 
-        // Applying offsets
+        // Adding offsets
         My_Remote.Joystick.Channel_0 -= RC_CH_VALUE_OFFSET;
         My_Remote.Joystick.Channel_1 -= RC_CH_VALUE_OFFSET;
         My_Remote.Joystick.Channel_2 -= RC_CH_VALUE_OFFSET;

@@ -58,8 +58,8 @@ typedef struct {
 
 /* ************************************************************************* */
 
-void RC_Init(void);
+void RC_Init();
 
-void DMA2_Stream2_IRQHandler(void);
+void USART1_IRQHandler(void);
 
 #endif //BUTTON_LIGHT_STM32F4VE_DBUS_RC_H
