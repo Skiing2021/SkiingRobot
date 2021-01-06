@@ -62,4 +62,6 @@ void RC_Init(void);
 
 void DMA2_Stream2_IRQHandler(void);
 
+void RC_Restart(uint16_t DMA_Buffer_Num);
+
 #endif //BUTTON_LIGHT_STM32F4VE_DBUS_RC_H

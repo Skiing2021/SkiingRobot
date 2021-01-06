@@ -45,13 +45,13 @@ else ()
     add_compile_options(-Og -g)
 endif ()
 
-include_directories("StdPeriph_Driver/inc" "inc" "CMSIS/device" "CMSIS/core" "modules/control/include"
-        "modules/periph/include" "modules/fatfs/include")
+include_directories("StdPeriph_Driver/inc" "inc" "CMSIS/device" "CMSIS/core" "modules/com/include"
+        "modules/control/include" "modules/periph/include" "modules/fatfs/include")
 
 add_definitions(-DSTM32 -DSTM32F4 -DSTM32F427IIHx -DDEBUG -DSTM32F427_437xx -DUSE_STDPERIPH_DRIVER)
 
 file(GLOB_RECURSE SOURCES "StdPeriph_Driver/*.*" "src/*.*" "startup/*.*" "modules/control/src/*.*"
-        "modules/periph/src/*.*" "modules/fatfs/*.c")
+        "modules/common/src/*.c" "modules/periph/src/*.*" "modules/fatfs/*.c")
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/LinkerScript.ld)
 
