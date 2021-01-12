@@ -32,6 +32,7 @@ This program is designed for Sipeed K210 board
    a. Download and extract [kendryte-toolchain-win-i386-8.2.0-20190409.tar.xz](https://github.com/kendryte/kendryte-gnu-toolchain/releases/download/v8.2.0-20190409/kendryte-toolchain-win-i386-8.2.0-20190409.tar.xz) 
 
    b. Set environment variable `TOOLCHAIN` to `<parent_dir>/kendryte-toolchain/bin`
-
+   
+   c. Add `-G "MinGW Makefiles"` to CMake arguments
    
 
