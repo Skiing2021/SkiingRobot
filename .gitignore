@@ -1,3 +1,6 @@
 EC_Board_Firmware/.idea
 EC_Board_Firmware/build
 EC_Board_Firmware/cmake-build-debug
+
+Robot/.idea
+Robot/cmake-build*
