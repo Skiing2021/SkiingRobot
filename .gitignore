@@ -1,6 +1,9 @@
-EC_Board_Firmware/.idea
+*/.idea
+
 EC_Board_Firmware/build
 EC_Board_Firmware/cmake-build-debug
 
-Robot/.idea
 Robot/cmake-build*
+
+Control_Simulator/test_video
+*/__pycache__
