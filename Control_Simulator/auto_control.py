@@ -1,4 +1,3 @@
-from main import BBox
 
 def onDetected(bboxes):
     """
