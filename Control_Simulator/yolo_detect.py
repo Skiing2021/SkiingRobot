@@ -31,10 +31,9 @@ import numpy as np
 # ==========================================
 
 from models.experimental import attempt_load
-from utils.datasets import LoadStreams, LoadImages
+from utils.datasets import letterbox
 from utils.general import check_img_size, non_max_suppression, apply_classifier, scale_coords, xyxy2xywh, \
     strip_optimizer, set_logging, increment_path
-from utils.plots import plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized
 
 class YoloDetector:
@@ -48,7 +47,7 @@ class YoloDetector:
 
         # Load model
         self.model = attempt_load(weights, map_location=self.device)  # load FP32 model
-        self.imgsz = check_img_size(img_size, s=self.model.stride.max())  # check img_size
+        self.img_size = check_img_size(img_size, s=self.model.stride.max())  # check img_size
         if self.half:
             self.model.half()  # to FP16
 
@@ -61,19 +60,25 @@ class YoloDetector:
 
         # Get names and colors
         self.names = self.model.module.names if hasattr(self.model, 'module') else self.model.names
-        # self.colors = [  # color in BGR
-        #     [255, 0, 0],
-        #     [0, 0, 255]
-        # ]
-        self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in self.names]
+        self.colors = [  # color in BGR
+            [255, 0, 0],
+            [0, 0, 255]
+        ]
+        # self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in self.names]
 
         self.conf_thres = conf_thres
         self.iou_thres = iou_thres
 
     def Detect(self, cv2_img):
-        img = cv2.resize(cv2_img, (self.imgsz, self.imgsz))
-        img = np.asarray(img)
-        img = img.transpose(2, 0, 1)
+        # img = cv2.resize(cv2_img, (self.imgsz, self.imgsz))
+
+        # Padded resize
+        img = letterbox(cv2_img, new_shape=self.img_size)[0]
+
+        # Convert
+        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
+        img = np.ascontiguousarray(img)
+
         img = torch.from_numpy(img).to(self.device)
         img = img.half() if self.half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -90,6 +95,10 @@ class YoloDetector:
         if self.classify:
             # pred = apply_classifier(pred, self.modelc, img, im0s)
             raise NotImplementedError
+
+        for i, det in enumerate(pred):
+            # Rescale boxes from img_size to im0 size
+            det[:, :4] = scale_coords(img.shape[2:], det[:, :4], cv2_img.shape).round()
 
         return pred
 
