@@ -70,7 +70,7 @@ if __name__ == '__main__':
                                 lineType=cv2.LINE_AA)
                     bbox.append(BBox(xmin, ymin, xmax, ymax, conf, cls))
 
-        target = onDetected(bbox)
+        target = onDetected(bbox, frame)
         c3 = (int(target[0]), int(target[1]))
         cv2.drawMarker(frame, c3, [0, 255, 0], markerType=cv2.MARKER_CROSS, thickness=line_thickness, markerSize=75)
 
