@@ -2,13 +2,19 @@
 
 This project is used to prototype and test the auto control algorithm.
 
+#### Recommended test video
+| video_id | URL |
+| ---- | ---- |
+| vid25 | https://www.youtube.com/watch?v=8GwpubtvueM |
+| vid32 | https://www.youtube.com/watch?v=M4XbJqRO00s |
+| vid38 | https://www.youtube.com/watch?v=JsJY9U74l7w |
+
 ## Requirements
 
 - Python 3.8
   - [PyTorch 1.7](https://pytorch.org/get-started/locally/)
   - opencv-python
-
-- YOLOv5
+- [YOLOv5](https://github.com/ultralytics/yolov5)
 
   
 
@@ -46,10 +52,12 @@ This project is used to prototype and test the auto control algorithm.
     git clone https://github.com/Skiing2021/SkiingRobot.git
     ```
 
-4. Clone **yolov5** repo to **another** directory of your choice
+4. Clone **yolov5** repo to **another** directory of your choice and install yolov5 dependencies
 
     ```shell
     git clone https://github.com/ultralytics/yolov5.git
+    cd yolov5
+    pip install -r requirements.txt
     ```
 
     Note that this repo will not run without yolov5 repo
