@@ -1,26 +1,65 @@
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.10)
+project(SkiingRobot VERSION 0.2)
 
-# Find K210 SDK
-FIND_PATH(SDK_ROOT lib/drivers/kpu.c HINTS $ENV{K210_SDK_PATH} REQUIRED)
-if (NOT SDK_ROOT)
-    MESSAGE(FATAL_ERROR "Could not found K210 SDK, please specific SDK path in environment variable K210_SDK_PATH")
+# OpenCV
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+
+# CUDA Toolkit
+if (NOT CUDA_TOOLKIT_ROOT_DIR)
+    find_path(CUDA_TOOLKIT_ROOT_DIR bin/nvcc PATHS /usr/local/cuda)
 endif()
-MESSAGE(STATUS "Found K210 SDK at ${SDK_ROOT}")
-
-# Find K210 RISC-V Toolchain
-FIND_PATH(TOOLCHAIN make make.exe HINTS $ENV{TOOLCHAIN} REQUIRED)
-if (NOT TOOLCHAIN)
-    MESSAGE(FATAL_ERROR "Could not found K210 Toolchain, please specific Toolchain path in environment variable TOOLCHAIN")
+if (NOT CUDA_TOOLKIT_ROOT_DIR)
+        message(FATAL_ERROR "Could not find CUDA Toolkit")
 endif()
-MESSAGE(STATUS "Found K210 Toolchain at ${TOOLCHAIN}")
+message(STATUS "Found CUDA_TOOLKIT_ROOT_DIR at ${CUDA_TOOLKIT_ROOT_DIR}")
 
-include(${SDK_ROOT}/cmake/common.cmake)
-project(SkiingRobot VERSION 0.1 LANGUAGES C CXX ASM)
+find_path(CUDA_INCLUDE_DIR cuda_runtime.h
+        HINTS ${CUDA_TOOLKIT_ROOT_DIR}
+        PATH_SUFFIXES include
+        )
+include_directories(${CUDA_INCLUDE_DIR})
+message(STATUS "Found CUDA headers at ${CUDA_INCLUDE_DIR}")
 
-# config headers
-include(${SDK_ROOT}/cmake/macros.internal.cmake)
-header_directories(${K210_SDK_PATH}/lib)
+find_library(CUDA_LIBRARIES
+        NAMES cudart
+        HINTS ${CUDA_TOOLKIT_ROOT_DIR}
+        PATH_SUFFIXES lib lib64 lib/x86_64 lib/x64 lib/x86 lib/Win32 lib/import lib64/import
+        PATHS ${CUBLAS_PATHS}
+        DOC "CUDA library"
+        )
+MESSAGE(STATUS "Found CUDA libraries at ${CUDA_LIBRARIES}")
 
-# compile project
-add_source_files(*.c)
-include(executable.cmake)
+# TensorRT
+find_path(TENSORRT_INCLUDE_DIR NvInfer.h
+        HINTS ${TENSORRT_ROOT} ${CUDA_TOOLKIT_ROOT_DIR}
+        PATH_SUFFIXES include)
+MESSAGE(STATUS "Found TensorRT headers at ${TENSORRT_INCLUDE_DIR}")
+include_directories(${TENSORRT_INCLUDE_DIR})
+find_library(TENSORRT_LIBRARY_INFER nvinfer
+        HINTS ${TENSORRT_ROOT} ${TENSORRT_BUILD} ${CUDA_TOOLKIT_ROOT_DIR}
+        PATH_SUFFIXES lib lib64 lib/x64)
+find_library(TENSORRT_LIBRARY_INFER_PLUGIN nvinfer_plugin
+        HINTS  ${TENSORRT_ROOT} ${TENSORRT_BUILD} ${CUDA_TOOLKIT_ROOT_DIR}
+        PATH_SUFFIXES lib lib64 lib/x64)
+if(WIN32)
+    find_library(TENSORRT_LIBRARY_MYELIN myelin64_1
+            HINTS  ${TENSORRT_ROOT} ${TENSORRT_BUILD} ${CUDA_TOOLKIT_ROOT_DIR}
+            PATH_SUFFIXES lib lib64 lib/x64)
+else()
+    find_library(TENSORRT_LIBRARY_MYELIN myelin
+            HINTS  ${TENSORRT_ROOT} ${TENSORRT_BUILD} ${CUDA_TOOLKIT_ROOT_DIR}
+            PATH_SUFFIXES lib lib64 lib/x64)
+endif()
+set(TENSORRT_LIBRARY ${TENSORRT_LIBRARY_INFER} ${TENSORRT_LIBRARY_INFER_PLUGIN} ${TENSORRT_LIBRARY_MYELIN})
+MESSAGE(STATUS "Find TensorRT libs at ${TENSORRT_LIBRARY}")
+find_package_handle_standard_args(
+        TENSORRT DEFAULT_MSG TENSORRT_INCLUDE_DIR TENSORRT_LIBRARY)
+if(NOT TENSORRT_FOUND)
+    message(ERROR "Cannot find TensorRT library.")
+endif()
+
+
+add_executable(SkiingRobot Main.cpp Core.h Core.cpp TrtEngine.cpp TrtEngine.h 
+                SSDRes18Engine.cpp SSDRes18Engine.h)
+target_link_libraries(SkiingRobot ${OpenCV_LIBS} ${CUDA_LIBRARIES} ${TENSORRT_LIBRARY})
