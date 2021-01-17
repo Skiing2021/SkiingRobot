@@ -3,6 +3,7 @@ import argparse
 from yolo_detect import YoloDetector
 from auto_control import onDetected
 
+
 class BBox:
     def __init__(self, xmin, ymin, xmax, ymax, conf, cls):
         """
@@ -22,6 +23,7 @@ class BBox:
         self.conf = conf
         self.cls = cls
 
+
 # Recommended test video
 # https://www.youtube.com/watch?v=8GwpubtvueM
 # https://www.youtube.com/watch?v=M4XbJqRO00s
@@ -37,7 +39,7 @@ if __name__ == '__main__':
     opt = parser.parse_args()
     print(opt)
 
-    cap = cv2.VideoCapture("test_video/vid0.MOV")
+    cap = cv2.VideoCapture(opt.source)
     window_name = "Skiing Control Simulator    -    Press \"Q\" to exit"
 
     detector = YoloDetector(opt.weights, opt.device, opt.img_size, opt.conf_thres, opt.iou_thres)
@@ -66,7 +68,8 @@ if __name__ == '__main__':
                     t_size = cv2.getTextSize(label, 0, fontScale=line_thickness / 3, thickness=font_thickness)[0]
                     c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
                     cv2.rectangle(frame, c1, c2, detector.colors[cls], -1, cv2.LINE_AA)  # filled
-                    cv2.putText(frame, label, (c1[0], c1[1] - 2), 0, line_thickness / 3, [225, 255, 255], thickness=font_thickness,
+                    cv2.putText(frame, label, (c1[0], c1[1] - 2), 0, line_thickness / 3, [225, 255, 255],
+                                thickness=font_thickness,
                                 lineType=cv2.LINE_AA)
                     bbox.append(BBox(xmin, ymin, xmax, ymax, conf, cls))
 
