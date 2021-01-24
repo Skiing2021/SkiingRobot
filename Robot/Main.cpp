@@ -2,7 +2,7 @@
 
 #include "Core.h"
 #include "TrtEngine.h"
-#include "SSDRes18Engine.h"
+#include "Yolo5Engine.h"
 
 using namespace std;
 
@@ -28,7 +28,6 @@ int main(int argc, char* argv[])
         return PrintBadArguments();
     }
 
-    // Demo usage
-    SSDRes18Engine(argv[1], 224, 224);
-    //TODO: implment YoloEngine
+    Yolo5Engine engine = Yolo5Engine(argv[1], 224, 224);
+    auto result = engine.DoInfer(imread("G:/skiing/dataset/val/images/vid4_18.jpg"), 0.3);
 }

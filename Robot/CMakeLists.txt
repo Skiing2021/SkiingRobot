@@ -51,5 +51,5 @@ cuda_add_library(yoloplugin STATIC tensorrtx/yolov5/yololayer.cu)
 target_link_libraries(yoloplugin ${CUDA_LIBRARIES} ${TENSORRT_LIBRARY})
 
 add_executable(SkiingRobot Main.cpp Core.h Core.cpp TrtEngine.cpp TrtEngine.h
-        SSDRes18Engine.cpp SSDRes18Engine.h)
+        Yolo5Engine.cpp Yolo5Engine.h)
 target_link_libraries(SkiingRobot yoloplugin ${OpenCV_LIBS} ${CUDA_LIBRARIES} ${TENSORRT_LIBRARY})

@@ -75,10 +75,11 @@ TrtEngine::~TrtEngine()
 void TrtEngine::LoadEngine(const string &path) {
     if (!fileExist(path))
     {
-        cout << "Error: Could not found engine file" << endl;
+        cout << "Error: Could not find engine file" << endl;
         exit(-1);
     }
 
+    cout << "Loading engine file..." << endl;
     ifstream file(path, ios::in | ios::binary);
     file.seekg (0, std::ifstream::end);
     size_t size = file.tellg();
@@ -88,7 +89,7 @@ void TrtEngine::LoadEngine(const string &path) {
     file.read(buffer, size);
     file.close();
 
-    initLibNvInferPlugins(getLogger(), "");
+    cout << "Deserializing engine..." << endl;
     _engine = _runtime->deserializeCudaEngine(buffer, size, nullptr);
 
     delete[] buffer;
