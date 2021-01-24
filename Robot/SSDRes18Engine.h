@@ -2,8 +2,8 @@
 // Created by hao on 2020/12/17.
 //
 
-#ifndef TLT_TRAFFICDETECT_SSDRES18ENGINE_H
-#define TLT_TRAFFICDETECT_SSDRES18ENGINE_H
+#ifndef SKIINGROBOT_SSDRES18ENGINE_H
+#define SKIINGROBOT_SSDRES18ENGINE_H
 
 #include <iostream>
 #include <fstream>
@@ -29,4 +29,4 @@ protected:
     vector<DetectedObject> PostProcess(vector<float*> outputs, float confidenceThreshold, int originWidth, int originHeight) override;
 };
 
-#endif //TLT_TRAFFICDETECT_SSDRES18ENGINE_H
+#endif //SKIINGROBOT_SSDRES18ENGINE_H

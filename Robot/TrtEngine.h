@@ -2,8 +2,8 @@
 // Created by hao on 2020/12/17.
 //
 
-#ifndef TLT_TRAFFICDETECT_TRTENGINE_H
-#define TLT_TRAFFICDETECT_TRTENGINE_H
+#ifndef SKIINGROBOT_TRTENGINE_H
+#define SKIINGROBOT_TRTENGINE_H
 
 #include <iostream>
 #include <fstream>
@@ -51,4 +51,4 @@ protected:
 };
 
 
-#endif //TLT_TRAFFICDETECT_TRTENGINE_H
+#endif //SKIINGROBOT_TRTENGINE_H

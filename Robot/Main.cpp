@@ -9,7 +9,7 @@ using namespace std;
 void PrintHelp()
 {
     cout << "SkiingRobot 0.2" << endl;
-    cout << "Usage: TrtTrafficDetect <engine_file>" << endl;
+    cout << "Usage: SkiingRobot <engine_file>" << endl;
     cout << "    engine_file: path to model TensorRT engine file" <<endl;
     cout << endl;
 }
