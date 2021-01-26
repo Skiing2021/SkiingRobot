@@ -9,9 +9,10 @@
 
 using namespace cv;
 
-Yolo5Engine::Yolo5Engine(const string &modelPath, int modelWidth, int modelHeight) : TrtEngine(modelPath, modelWidth,
-                                                                                               modelHeight) {
-
+Yolo5Engine::Yolo5Engine(const string &modelPath, int modelWidth, int modelHeight, float nmsThreshold)
+    : TrtEngine(modelPath, modelWidth, modelHeight)
+{
+    this->NMS_Threshold = nmsThreshold;
 }
 
 vector<Mat> Yolo5Engine::PreProcess(const Mat &img) {
@@ -36,17 +37,32 @@ vector<Mat> Yolo5Engine::PreProcess(const Mat &img) {
     return ret;
 }
 
+float iou(BBoxCoordinate *bbox, BBoxCoordinate *bbox_next) {
+    int interBox[] = {
+            max(bbox->xMin, bbox_next->xMin),
+            max(bbox->xMax, bbox_next->xMax),
+            max(bbox->yMin, bbox_next->yMin),
+            max(bbox->yMax, bbox_next->yMax)
+    };
+
+    if (interBox[2] > interBox[3] || interBox[0] > interBox[1])
+    {
+        return 0.0f;
+    }
+
+    int interBoxS = (interBox[1] - interBox[0]) * (interBox[3] - interBox[2]);
+    int area_bbox = (bbox->xMax - bbox->xMin) * (bbox->yMax - bbox->yMin);
+    int area_bbox_next = (bbox_next->xMax - bbox_next->xMin) * (bbox_next->yMax - bbox_next->yMin);
+    return (float)interBoxS / (float)(area_bbox + area_bbox_next - interBoxS);
+}
+
 bool cmp(const DetectedObject& a, const DetectedObject& b) {
     return a.confidence > b.confidence;
 }
 
 vector<DetectedObject>
 Yolo5Engine::PostProcess(vector<float *> outputs, float confidenceThreshold, int originWidth, int originHeight) {
-    std::vector<DetectedObject> objectList { };
-    for (int i = 0; i < 20; i ++)
-    {
-        cout << outputs[0][i] << endl;
-    }
+    vector<DetectedObject> objectList { };
 
     for (int i = 1; i <= buffersSize[1]; i += 6)
     {
@@ -75,11 +91,24 @@ Yolo5Engine::PostProcess(vector<float *> outputs, float confidenceThreshold, int
         }
     }
 
-    // nms
-    std::sort(objectList.begin(), objectList.end(), cmp);
-    //TODO: NMS & IOU
+    // Non-maximum Suppression
+    vector<DetectedObject> ret;
+    sort(objectList.begin(), objectList.end(), cmp);
+    for (int i = 0; i < objectList.size(); i++)
+    {
+        auto& obj = objectList[i];
+        ret.push_back(obj);
+        for (int j = i + 1; j < objectList.size(); j++)
+        {
+            if (iou(&obj.bbox, &objectList[j].bbox) > this->NMS_Threshold)
+            {
+                objectList.erase(objectList.begin() + j);
+                j--;
+            }
+        }
+    }
 
-    return objectList;
+    return ret;
 }
 
 // Implementation adapted from:

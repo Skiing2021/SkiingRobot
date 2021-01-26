@@ -29,5 +29,18 @@ int main(int argc, char* argv[])
     }
 
     Yolo5Engine engine = Yolo5Engine(argv[1], 224, 224);
-    auto result = engine.DoInfer(imread("G:/skiing/dataset/val/images/vid4_18.jpg"), 0.3);
+    Mat img = imread("G:/skiing/dataset/val/images/vid4_18.jpg");
+    auto result = engine.DoInfer(img, 0.3);
+
+    float ratioW = (float)img.cols / 224.0f;
+    float ratioH = (float)img.rows / 224.0f;
+    for (DetectedObject obj : result)
+    {
+        rectangle(img, Point((float)obj.bbox.xMin * ratioW, (float)obj.bbox.yMin * ratioH),
+                  Point((float)obj.bbox.xMax * ratioW, (float)obj.bbox.yMax * ratioH),
+                  Scalar(0, 255, 0));
+    }
+
+    imshow("Debug", img);
+    waitKey();
 }
