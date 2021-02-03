@@ -40,9 +40,9 @@ vector<Mat> Yolo5Engine::PreProcess(const Mat &img) {
 float iou(BBoxCoordinate *bbox, BBoxCoordinate *bbox_next) {
     int interBox[] = {
             max(bbox->xMin, bbox_next->xMin),
-            max(bbox->xMax, bbox_next->xMax),
+            min(bbox->xMax, bbox_next->xMax),
             max(bbox->yMin, bbox_next->yMin),
-            max(bbox->yMax, bbox_next->yMax)
+            min(bbox->yMax, bbox_next->yMax)
     };
 
     if (interBox[2] > interBox[3] || interBox[0] > interBox[1])
