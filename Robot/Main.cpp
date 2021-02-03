@@ -32,12 +32,10 @@ int main(int argc, char* argv[])
     Mat img = imread("G:/skiing/dataset/val/images/vid4_18.jpg");
     auto result = engine.DoInfer(img, 0.3);
 
-    float ratioW = (float)img.cols / 224.0f;
-    float ratioH = (float)img.rows / 224.0f;
     for (DetectedObject obj : result)
     {
-        rectangle(img, Point((float)obj.bbox.xMin * ratioW, (float)obj.bbox.yMin * ratioH),
-                  Point((float)obj.bbox.xMax * ratioW, (float)obj.bbox.yMax * ratioH),
+        rectangle(img, Point((float)obj.bbox.xMin, (float)obj.bbox.yMin),
+                  Point((float)obj.bbox.xMax, (float)obj.bbox.yMax),
                   Scalar(0, 255, 0));
     }
 

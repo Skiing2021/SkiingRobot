@@ -33,9 +33,9 @@ TrtEngine::TrtEngine(const string &modelPath, int modelWidth, int modelHeight)
     LoadEngine(modelPath);
 
     deviceBuffers = vector<char*>();
-    hostOutputBuffers = vector<float*>();
+    hostBuffers = vector<float*>();
     buffersSize = vector<size_t>();
-    buffersSizeBytes = vector<size_t>();
+    buffersSizeInBytes = vector<size_t>();
 
     PrepareContext();
 }
@@ -59,11 +59,11 @@ TrtEngine::~TrtEngine()
         _runtime->destroy();
     }
 
-    for (auto p : hostOutputBuffers)
+    for (auto p : hostBuffers)
     {
         free(p);
     }
-    hostOutputBuffers.clear();
+    hostBuffers.clear();
 
     for (auto p : deviceBuffers)
     {
@@ -91,15 +91,18 @@ void TrtEngine::LoadEngine(const string &path) {
 
     cout << "Deserializing engine..." << endl;
     _engine = _runtime->deserializeCudaEngine(buffer, size, nullptr);
+    cout << "Successfully loaded engine." << endl;
 
     delete[] buffer;
 }
 
 void TrtEngine::PrepareContext() {
     _context = _engine->createExecutionContext();
-    _context->setOptimizationProfile(0);
     cudaStreamCreate(&_stream);
 
+    cout << "================================" << endl;
+    cout << "         Engine Summary         " << endl;
+    cout << "================================" << endl;
     int bindings = _engine->getNbBindings();
     int maxBatchSize = _engine->getMaxBatchSize();
     cout << "bindings: " << bindings << endl;
@@ -108,24 +111,27 @@ void TrtEngine::PrepareContext() {
     {
         Dims dim = _engine->getBindingDimensions(i);
         size_t sz = maxBatchSize * dim.d[0] * dim.d[1] * dim.d[2];
-        char* deviceBuf;
-        cudaMalloc(&deviceBuf, sz * sizeof(float));
-
-        deviceBuffers.push_back(deviceBuf);
+        size_t szInBytes = sz * sizeof(float);
         buffersSize.push_back(sz);
-        buffersSizeBytes.push_back(sz * sizeof(float));
+        buffersSizeInBytes.push_back(szInBytes);
+
+        char* deviceBuf;
+        cudaMalloc(&deviceBuf, szInBytes);
+        deviceBuffers.push_back(deviceBuf);
+
+        float* hostBuf = (float*) malloc(szInBytes);
+        hostBuffers.push_back(hostBuf);
 
         if (_engine->bindingIsInput(i))
         {
-            cout << "input[" << i << "]: " << sz << endl;
+            cout << "input[" << i << "]: ";
         }
         else
         {
-            float* hostBuf = (float*) malloc(sz * sizeof(float));
-            hostOutputBuffers.push_back(hostBuf);
-
-            cout << "output[" << i << "]: " << sz << endl;
+            cout << "output[" << i << "]: ";
         }
+        cout << dim.d[0] << "x" << dim.d[1] << "x" << dim.d[2] << "    " << szInBytes << " bytes" << endl;
     }
+    cout << "================================" << endl;
 }
 

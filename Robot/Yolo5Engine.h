@@ -15,12 +15,9 @@ public:
     Yolo5Engine(const string &modelPath, int modelWidth, int modelHeight, float nmsThreshold = DEFAULT_NMS_THRESHOLD);
     vector<DetectedObject> DoInfer(const Mat& image, float confidenceThreshold) override;
 
-    /// Resize image to a 32-pixel-multiple rectangle https://github.com/ultralytics/yolov3/issues/232
-    Mat LetterBoxResize(const Mat &img);
-
 protected:
-    vector<Mat> PreProcess(const Mat &img) override;
-    vector<DetectedObject> PostProcess(vector<float*> outputs, float confidenceThreshold, int originWidth, int originHeight) override;
+    void PreProcess(const Mat &img) override;
+    vector<DetectedObject> PostProcess(float confidenceThreshold, int originWidth, int originHeight) override;
 
 private:
     static constexpr float DEFAULT_NMS_THRESHOLD = 0.5f;

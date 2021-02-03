@@ -15,26 +15,38 @@ Yolo5Engine::Yolo5Engine(const string &modelPath, int modelWidth, int modelHeigh
     this->NMS_Threshold = nmsThreshold;
 }
 
-vector<Mat> Yolo5Engine::PreProcess(const Mat &img) {
-    Mat imgResized;
-    Mat imgFloat;
+void Yolo5Engine::PreProcess(const Mat &img) {
+    // letter box resize
+    int w, h, x, y;
+    float r_w = _modelWidth / (img.cols*1.0);
+    float r_h = _modelHeight / (img.rows*1.0);
+    if (r_h > r_w) {
+        w = _modelWidth;
+        h = r_w * img.rows;
+        x = 0;
+        y = (_modelHeight - h) / 2;
+    } else {
+        w = r_h * img.cols;
+        h = _modelHeight;
+        x = (_modelWidth - w) / 2;
+        y = 0;
+    }
+    cv::Mat re(h, w, CV_8UC3);
+    cv::resize(img, re, re.size(), 0, 0, cv::INTER_LINEAR);
+    cv::Mat out(_modelHeight, _modelWidth, CV_8UC3, cv::Scalar(128, 128, 128));
+    re.copyTo(out(cv::Rect(x, y, re.cols, re.rows)));
 
-    imgResized = LetterBoxResize(img);
-    imgResized.convertTo(imgFloat, CV_32FC3, 1.0, 0); //uint8 -> float, divide by 255
-
-    Mat c;
-    Mat h;
-    Mat w;
-    extractChannel(imgFloat, c, 0);
-    extractChannel(imgFloat, h, 1);
-    extractChannel(imgFloat, w, 2);
-
-    vector<Mat> ret;
-    ret.push_back(c);
-    ret.push_back(h);
-    ret.push_back(w);
-
-    return ret;
+    int i = 0;
+    for (int row = 0; row < _modelHeight; ++row) {
+        uchar* uc_pixel = out.data + row * out.step;
+        for (int col = 0; col < _modelWidth; ++col) {
+            hostBuffers[0][i] = (float)uc_pixel[2] / 255.0;
+            hostBuffers[0][i + _modelHeight * _modelWidth] = (float)uc_pixel[1] / 255.0;
+            hostBuffers[0][i + 2 * _modelHeight * _modelWidth] = (float)uc_pixel[0] / 255.0;
+            uc_pixel += 3;
+            ++i;
+        }
+    }
 }
 
 float iou(BBoxCoordinate *bbox, BBoxCoordinate *bbox_next) {
@@ -61,23 +73,23 @@ bool cmp(const DetectedObject& a, const DetectedObject& b) {
 }
 
 vector<DetectedObject>
-Yolo5Engine::PostProcess(vector<float *> outputs, float confidenceThreshold, int originWidth, int originHeight) {
+Yolo5Engine::PostProcess(float confidenceThreshold, int originWidth, int originHeight) {
     vector<DetectedObject> objectList { };
 
     for (int i = 1; i <= buffersSize[1]; i += 6)
     {
-        float confidence = outputs[0][i + 4];
+        float confidence = hostBuffers[1][i + 4];
         if (confidence >= confidenceThreshold)
         {
             DetectedObject object = { };
-            object.classId = outputs[0][i + 5];
+            object.classId = hostBuffers[1][i + 5];
             object.confidence = confidence;
 
             BBoxCoordinate b = { };
-            float centerX = outputs[0][i];
-            float centerY = outputs[0][i + 1];
-            float w = outputs[0][i + 2];
-            float h = outputs[0][i + 3];
+            float centerX = hostBuffers[1][i];
+            float centerY = hostBuffers[1][i + 1];
+            float w = hostBuffers[1][i + 2];
+            float h = hostBuffers[1][i + 3];
             w /= 2;
             h /= 2;
 
@@ -108,63 +120,38 @@ Yolo5Engine::PostProcess(vector<float *> outputs, float confidenceThreshold, int
         }
     }
 
-    return ret;
-}
-
-// Implementation adapted from:
-// https://github.com/ultralytics/yolov5/blob/d9212140b355b84e85a473be590720eb8221766c/utils/datasets.py#L780-L810
-Mat Yolo5Engine::LetterBoxResize(const Mat &img) {
-    // Scale ratio (new /old)
-    float ratio = min((float)this->_modelHeight / (float)img.size[0], (float)this->_modelWidth / (float)img.size[1]);
-    // only scale down
-    ratio = min(ratio, 1.0f);
-
-    // Compute padding
-    int unpad_w = int(round((float)img.size[1] * ratio));
-    int unpad_h = int(round((float)img.size[0] * ratio));
-    float dw = (float)this->_modelWidth - (float)unpad_w;
-    float dh = (float)this->_modelHeight - (float)unpad_h;
-
-    // Divide padding into 2 sides
-    dw /= 2;
-    dh /= 2;
-
-    Mat resized;
-    if (img.size[0] != unpad_h || img.size[1] != unpad_w)
+    // rescale letter-boxed bbox coordinates -> coordinates with respect to the origin image
+    float r_w = (float)_modelWidth / (float)originWidth;
+    float r_h = (float)_modelHeight / (float)originHeight;
+    for (DetectedObject& obj : ret)
     {
-        resize(img, resized, Size(unpad_w, unpad_h));
-    }
-    else
-    {
-        resized = img;
-    }
+        if (r_h > r_w)
+        {
+            obj.bbox.xMin = (int)((float)obj.bbox.xMin / r_w);
+            obj.bbox.xMax = (int)((float)obj.bbox.xMax / r_w);
+            obj.bbox.yMin = (int)(((float)obj.bbox.yMin - ((float)_modelHeight - r_w * (float)originHeight) / 2) / r_w);
+            obj.bbox.yMax = (int)(((float)obj.bbox.yMax - ((float)_modelHeight - r_w * (float)originHeight) / 2) / r_w);
+        }
+        else
+        {
+            obj.bbox.xMin = (int)(((float)obj.bbox.xMin - ((float)_modelWidth - r_w * (float)originWidth) / 2) / r_w);
+            obj.bbox.xMax = (int)(((float)obj.bbox.xMax - ((float)_modelWidth - r_w * (float)originWidth) / 2) / r_w);
+            obj.bbox.yMin = (int)((float)obj.bbox.yMin / r_h);
+            obj.bbox.yMax = (int)((float)obj.bbox.yMax/ r_h);
+        }
 
-    int top = int(round(dh - 0.1));
-    int bottom = int(round(dh + 0.1));
-    int left = int(round(dw - 0.1));
-    int right = int(round(dw + 0.1));
-
-    Mat ret;
-    copyMakeBorder(resized, ret, top, bottom, left, right, BORDER_CONSTANT, Scalar(114, 114, 114));
+    }
 
     return ret;
 }
 
 vector<DetectedObject> Yolo5Engine::DoInfer(const Mat &image, float confidenceThreshold) {
-    auto img = PreProcess(image);
+    PreProcess(image);
 
-    size_t per = buffersSizeBytes[0] / 3;
-
-    cudaMemcpyAsync(deviceBuffers[0], img[0].data, per, cudaMemcpyHostToDevice, _stream);
-    cudaMemcpyAsync(deviceBuffers[0] + per, img[1].data, per, cudaMemcpyHostToDevice, _stream);
-    cudaMemcpyAsync(deviceBuffers[0] + per * 2, img[2].data, per, cudaMemcpyHostToDevice, _stream);
-
+    cudaMemcpyAsync(deviceBuffers[0], hostBuffers[0], buffersSizeInBytes[0], cudaMemcpyHostToDevice, _stream);
     _context->enqueue(1, reinterpret_cast<void **>(deviceBuffers.data()), _stream, nullptr);
-
-    cudaMemcpyAsync(hostOutputBuffers[0], deviceBuffers[1], buffersSizeBytes[1], cudaMemcpyDeviceToHost, _stream);
-//    cudaMemcpyAsync(hostOutputBuffers[1], deviceBuffers[2], buffersSizeBytes[2], cudaMemcpyDeviceToHost, _stream);
+    cudaMemcpyAsync(hostBuffers[1], deviceBuffers[1], buffersSizeInBytes[1], cudaMemcpyDeviceToHost, _stream);
     cudaStreamSynchronize(_stream);
 
-    img.clear();
-    return PostProcess(hostOutputBuffers, confidenceThreshold, image.cols, image.rows);
+    return PostProcess(confidenceThreshold, image.cols, image.rows);
 }

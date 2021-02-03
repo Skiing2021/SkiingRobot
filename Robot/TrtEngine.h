@@ -27,8 +27,8 @@ public:
     ~TrtEngine();
 
     virtual vector<DetectedObject> DoInfer(const Mat& image, float confidenceThreshold) = 0;
-    virtual vector<Mat> PreProcess(const Mat& img) = 0;
-    virtual vector<DetectedObject> PostProcess(vector<float*> outputs, float confidenceThreshold, int originWidth, int originHeight) = 0;
+    virtual void PreProcess(const Mat& img) = 0;
+    virtual vector<DetectedObject> PostProcess(float confidenceThreshold, int originWidth, int originHeight) = 0;
 
     string _modelPath;
     int _modelWidth;
@@ -42,9 +42,9 @@ protected:
     cudaStream_t _stream = nullptr;
 
     vector<char*> deviceBuffers;
-    vector<float*> hostOutputBuffers;
+    vector<float*> hostBuffers;
     vector<size_t> buffersSize;
-    vector<size_t> buffersSizeBytes;
+    vector<size_t> buffersSizeInBytes;
 
     void LoadEngine(const string& path);
     void PrepareContext();
