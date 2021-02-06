@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
 project(SkiingRobot VERSION 0.2)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+if(NOT WIN32)
+    link_libraries(stdc++fs)
+endif()
 
 # OpenCV
 if (NOT OpenCV_DIR)

@@ -51,7 +51,10 @@ int main(int argc, char* argv[])
         Mat frame;
         while (capture.read(frame))
         {
+            auto start = std::chrono::system_clock::now();
             auto result = engine.DoInfer(frame, 0.3);
+            auto end = std::chrono::system_clock::now();
+            cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << endl;
 
             for (DetectedObject obj : result)
             {
@@ -60,8 +63,6 @@ int main(int argc, char* argv[])
                           Scalar(0, 255, 0));
             }
 
-            imshow("Demo Result", frame);
         }
-        waitKey();
     }
 }
