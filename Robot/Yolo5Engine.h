@@ -14,6 +14,8 @@ public:
 
     Yolo5Engine(const string &modelPath, int modelWidth, int modelHeight, float nmsThreshold = DEFAULT_NMS_THRESHOLD);
     vector<DetectedObject> DoInfer(const Mat& image, float confidenceThreshold) override;
+    void EnqueueInfer(const Mat& image);
+    vector<DetectedObject> DequeueInfer(float confidenceThreshold, int originWidth, int originHeight);
 
 protected:
     void PreProcess(const Mat &img) override;
