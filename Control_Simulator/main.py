@@ -1,5 +1,6 @@
 import cv2
 import argparse
+import os
 from yolo_detect import YoloDetector
 from auto_control import onDetected
 
@@ -42,6 +43,17 @@ if __name__ == '__main__':
     cap = cv2.VideoCapture(opt.source)
     window_name = "Skiing Control Simulator    -    Press \"Q\" to exit"
 
+    run_id = 1
+    while os.path.exists("run" + str(run_id) + ".mp4"):
+        run_id = run_id + 1
+
+    fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    file_name = "run" + str(run_id) + ".mp4"
+    writer = cv2.VideoWriter(file_name, fourcc, fps, (w, h))
+
     detector = YoloDetector(opt.weights, opt.device, opt.img_size, opt.conf_thres, opt.iou_thres)
     while True:
         ret, frame = cap.read()
@@ -78,6 +90,7 @@ if __name__ == '__main__':
         cv2.drawMarker(frame, c3, [0, 255, 0], markerType=cv2.MARKER_CROSS, thickness=line_thickness, markerSize=75)
 
         display = cv2.resize(frame, (1280, 720))
+        writer.write(frame)
         cv2.imshow(window_name, display)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
