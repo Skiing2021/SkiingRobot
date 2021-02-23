@@ -12,6 +12,6 @@
 #include <unistd.h> // write(), read(), close()
 
 int serialInit(char *serial_path);
-void sendYawAngleSpeed(double angleSpeed);
+void sendYawAngleSpeed(char angleSpeed);
 
 #endif

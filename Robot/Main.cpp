@@ -6,6 +6,7 @@
 #include "Yolo5Engine.h"
 
 #ifndef WIN32
+#include <iomanip>
 #include "Serial.hpp"
 #endif
 
@@ -76,14 +77,14 @@ int main(int argc, char* argv[])
     {
         if (serialInit(argv[3]) == -1)
         {
-            cout << "Serial init failed! << endl;
+            cout << "Serial init failed!" << endl;
         }
     }
     else
     {
         if (serialInit((char*)"/dev/ttyUSB0") == -1)
         {
-            cout << "Serial init failed! << endl;
+            cout << "Serial init failed!" << endl;
         }
     }
 #endif
