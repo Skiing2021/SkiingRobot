@@ -53,6 +53,10 @@ endif()
 cuda_add_library(yoloplugin STATIC tensorrtx/yolov5/yololayer.cu)
 target_link_libraries(yoloplugin ${CUDA_LIBRARIES} ${TENSORRT_LIBRARY})
 
-add_executable(SkiingRobot Main.cpp Core.h Core.cpp TrtEngine.cpp TrtEngine.h
-        Yolo5Engine.cpp Yolo5Engine.h)
+if (WIN32)
+    add_executable(SkiingRobot Main.cpp Core.cpp TrtEngine.cpp Yolo5Engine.cpp)
+else()
+    # Serial lib
+    add_executable(SkiingRobot Main.cpp Core.cpp TrtEngine.cpp Yolo5Engine.cpp Serial.cpp)
+endif()
 target_link_libraries(SkiingRobot yoloplugin ${OpenCV_LIBS} ${CUDA_LIBRARIES} ${TENSORRT_LIBRARY})

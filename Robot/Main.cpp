@@ -5,6 +5,10 @@
 #include "TrtEngine.h"
 #include "Yolo5Engine.h"
 
+#ifndef WIN32
+#include "Serial.hpp"
+#endif
+
 using namespace std;
 using namespace std::filesystem;
 
@@ -33,6 +37,18 @@ std::string get_current_time_and_date()
     ss << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d_%H-%M-%S");
     return ss.str();
 }
+
+struct TargetInfo
+{
+    int x;
+    int y;
+};
+
+TargetInfo onDetected(vector<DetectedObject> objs, Mat frame)
+{
+
+}
+
 int main(int argc, char* argv[])
 {
     if (argc < 2)
@@ -55,10 +71,22 @@ int main(int argc, char* argv[])
         writer = VideoWriter(filename.str(), VideoWriter::fourcc('M', 'P', '4', 'V'), 30, Size(1280, 720));
     }
 
+#ifndef WIN32
+    if (argc >= 4)
     {
+        if (serialInit(argv[3]) == -1)
         {
+            cout << "Serial init failed! << endl;
         }
     }
+    else
+    {
+        if (serialInit((char*)"/dev/ttyUSB0") == -1)
+        {
+            cout << "Serial init failed! << endl;
+        }
+    }
+#endif
 
     Mat frame;
     while (capture.read(frame))
@@ -69,6 +97,10 @@ int main(int argc, char* argv[])
         cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << endl;
 
         auto info = onDetected(result, frame);
+#ifndef WIN32
+        // send target info via serial port
+        sendYawAngleSpeed(0);
+#endif
 
         for (DetectedObject obj : result)
         {
