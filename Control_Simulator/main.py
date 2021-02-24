@@ -43,15 +43,12 @@ if __name__ == '__main__':
     cap = cv2.VideoCapture(opt.source)
     window_name = "Skiing Control Simulator    -    Press \"Q\" to exit"
 
-    run_id = 1
-    while os.path.exists("run" + str(run_id) + ".mp4"):
-        run_id = run_id + 1
-
     fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
     fps = cap.get(cv2.CAP_PROP_FPS)
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    file_name = "run" + str(run_id) + ".mp4"
+    from datetime import datetime
+    file_name = "run_" + datetime.today().strftime("%Y-%m-%d_%H-%M-%S") + ".mp4"
     writer = cv2.VideoWriter(file_name, fourcc, fps, (w, h))
 
     detector = YoloDetector(opt.weights, opt.device, opt.img_size, opt.conf_thres, opt.iou_thres)
