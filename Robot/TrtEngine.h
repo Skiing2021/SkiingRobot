@@ -15,6 +15,8 @@
 #include <NvInfer.h>
 #include <cuda_runtime.h>
 
+#include "tensorrtx/yolov5/yololayer.h"
+
 #include "Core.h"
 
 using namespace std;
@@ -26,9 +28,9 @@ public:
     TrtEngine(const string &modelPath, int modelWidth, int modelHeight);
     ~TrtEngine();
 
-    virtual vector<DetectedObject> DoInfer(const Mat& image, float confidenceThreshold) = 0;
+    virtual vector<Yolo::Detection> DoInfer(const Mat& image, float confidenceThreshold) = 0;
     virtual void PreProcess(const Mat& img) = 0;
-    virtual vector<DetectedObject> PostProcess(float confidenceThreshold, int originWidth, int originHeight) = 0;
+    virtual vector<Yolo::Detection> PostProcess(float confidenceThreshold, int originWidth, int originHeight) = 0;
 
     string _modelPath;
     int _modelWidth;

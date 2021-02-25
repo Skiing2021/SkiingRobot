@@ -39,15 +39,56 @@ std::string get_current_time_and_date()
     return ss.str();
 }
 
+int y_sum_origin;
+int color_change;
+int color; // 0-blue; 1-red
+int yaw_speed; //-128~-1 turn left; 0~127 turn right
+
 struct TargetInfo
 {
     int x;
     int y;
 };
 
-TargetInfo onDetected(vector<DetectedObject> objs, Mat frame)
+TargetInfo onDetected(vector<Yolo::Detection> objs, Mat frame)
 {
+    TargetInfo info = { };
+    if (color == 0)
+    {
+        drawMarker(frame, Point(30, 30), (255, 0, 0), MARKER_SQUARE, 10, 10);
+    }
+    else
+    {
+        drawMarker(frame, Point(30, 30), (255, 0, 0), MARKER_SQUARE, 10, 10);
+    }
 
+    return info;
+}
+
+cv::Rect get_rect(cv::Mat& img, float bbox[4]) {
+    int l, r, t, b;
+    float r_w = Yolo::INPUT_W / (img.cols * 1.0);
+    float r_h = Yolo::INPUT_H / (img.rows * 1.0);
+    if (r_h > r_w) {
+        l = bbox[0] - bbox[2] / 2.f;
+        r = bbox[0] + bbox[2] / 2.f;
+        t = bbox[1] - bbox[3] / 2.f - (Yolo::INPUT_H - r_w * img.rows) / 2;
+        b = bbox[1] + bbox[3] / 2.f - (Yolo::INPUT_H - r_w * img.rows) / 2;
+        l = l / r_w;
+        r = r / r_w;
+        t = t / r_w;
+        b = b / r_w;
+    } else {
+        l = bbox[0] - bbox[2] / 2.f - (Yolo::INPUT_W - r_h * img.cols) / 2;
+        r = bbox[0] + bbox[2] / 2.f - (Yolo::INPUT_W - r_h * img.cols) / 2;
+        t = bbox[1] - bbox[3] / 2.f;
+        b = bbox[1] + bbox[3] / 2.f;
+        l = l / r_h;
+        r = r / r_h;
+        t = t / r_h;
+        b = b / r_h;
+    }
+    return cv::Rect(l, t, r - l, b - t);
 }
 
 int main(int argc, char* argv[])
@@ -103,11 +144,10 @@ int main(int argc, char* argv[])
         sendYawAngleSpeed(0);
 #endif
 
-        for (DetectedObject obj : result)
-        {
-            rectangle(frame, Point((float)obj.bbox.xMin, (float)obj.bbox.yMin),
-                      Point((float)obj.bbox.xMax, (float)obj.bbox.yMax),
-                      Scalar(0, 255, 0));
+        for (size_t j = 0; j < result.size(); j++) {
+            cv::Rect r = get_rect(frame, result[j].bbox);
+            cv::rectangle(frame, r, cv::Scalar(0x27, 0xC1, 0x36), 2);
+            cv::putText(frame, std::to_string((int)result[j].class_id), cv::Point(r.x, r.y - 1), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(0xFF, 0xFF, 0xFF), 2);
         }
 
         if (flag_save_video)

@@ -5,7 +5,6 @@
 #include <map>
 #include <vector>
 #include "Yolo5Engine.h"
-#include "tensorrtx/yolov5/yololayer.h" // register yolo plugin
 
 using namespace cv;
 
@@ -18,134 +17,91 @@ Yolo5Engine::Yolo5Engine(const string &modelPath, int modelWidth, int modelHeigh
 void Yolo5Engine::PreProcess(const Mat &img) {
     // letter box resize
     int w, h, x, y;
-    float r_w = _modelWidth / (img.cols*1.0);
-    float r_h = _modelHeight / (img.rows*1.0);
+    float r_w = Yolo::INPUT_W / (img.cols*1.0);
+    float r_h = Yolo::INPUT_H / (img.rows*1.0);
     if (r_h > r_w) {
-        w = _modelWidth;
+        w = Yolo::INPUT_W;
         h = r_w * img.rows;
         x = 0;
-        y = (_modelHeight - h) / 2;
+        y = (Yolo::INPUT_H - h) / 2;
     } else {
         w = r_h * img.cols;
-        h = _modelHeight;
-        x = (_modelWidth - w) / 2;
+        h = Yolo::INPUT_H;
+        x = (Yolo::INPUT_W - w) / 2;
         y = 0;
     }
     cv::Mat re(h, w, CV_8UC3);
     cv::resize(img, re, re.size(), 0, 0, cv::INTER_LINEAR);
-    cv::Mat out(_modelHeight, _modelWidth, CV_8UC3, cv::Scalar(128, 128, 128));
+    cv::Mat out(Yolo::INPUT_H, Yolo::INPUT_W, CV_8UC3, cv::Scalar(128, 128, 128));
     re.copyTo(out(cv::Rect(x, y, re.cols, re.rows)));
 
     int i = 0;
-    for (int row = 0; row < _modelHeight; ++row) {
+    for (int row = 0; row < Yolo::INPUT_H; ++row) {
         uchar* uc_pixel = out.data + row * out.step;
-        for (int col = 0; col < _modelWidth; ++col) {
+        for (int col = 0; col < Yolo::INPUT_W; ++col) {
             hostBuffers[0][i] = (float)uc_pixel[2] / 255.0;
-            hostBuffers[0][i + _modelHeight * _modelWidth] = (float)uc_pixel[1] / 255.0;
-            hostBuffers[0][i + 2 * _modelHeight * _modelWidth] = (float)uc_pixel[0] / 255.0;
+            hostBuffers[0][i + Yolo::INPUT_H * Yolo::INPUT_W] = (float)uc_pixel[1] / 255.0;
+            hostBuffers[0][i + 2 * Yolo::INPUT_H * Yolo::INPUT_W] = (float)uc_pixel[0] / 255.0;
             uc_pixel += 3;
             ++i;
         }
     }
 }
 
-float iou(BBoxCoordinate *bbox, BBoxCoordinate *bbox_next) {
-    int interBox[] = {
-            max(bbox->xMin, bbox_next->xMin),
-            min(bbox->xMax, bbox_next->xMax),
-            max(bbox->yMin, bbox_next->yMin),
-            min(bbox->yMax, bbox_next->yMax)
+float iou(float lbox[4], float rbox[4]) {
+    float interBox[] = {
+            (std::max)(lbox[0] - lbox[2] / 2.f , rbox[0] - rbox[2] / 2.f), //left
+            (std::min)(lbox[0] + lbox[2] / 2.f , rbox[0] + rbox[2] / 2.f), //right
+            (std::max)(lbox[1] - lbox[3] / 2.f , rbox[1] - rbox[3] / 2.f), //top
+            (std::min)(lbox[1] + lbox[3] / 2.f , rbox[1] + rbox[3] / 2.f), //bottom
     };
 
     if (interBox[2] > interBox[3] || interBox[0] > interBox[1])
-    {
         return 0.0f;
-    }
 
-    int interBoxS = (interBox[1] - interBox[0]) * (interBox[3] - interBox[2]);
-    int area_bbox = (bbox->xMax - bbox->xMin) * (bbox->yMax - bbox->yMin);
-    int area_bbox_next = (bbox_next->xMax - bbox_next->xMin) * (bbox_next->yMax - bbox_next->yMin);
-    return (float)interBoxS / (float)(area_bbox + area_bbox_next - interBoxS);
+    float interBoxS = (interBox[1] - interBox[0])*(interBox[3] - interBox[2]);
+    return interBoxS / (lbox[2] * lbox[3] + rbox[2] * rbox[3] - interBoxS);
 }
 
-bool cmp(const DetectedObject& a, const DetectedObject& b) {
-    return a.confidence > b.confidence;
+bool cmp(const Yolo::Detection& a, const Yolo::Detection& b) {
+    return a.conf > b.conf;
 }
 
-vector<DetectedObject>
-Yolo5Engine::PostProcess(float confidenceThreshold, int originWidth, int originHeight) {
-    vector<DetectedObject> objectList { };
-
-    for (int i = 1; i <= buffersSize[1]; i += 6)
-    {
-        float confidence = hostBuffers[1][i + 4];
-        if (confidence >= confidenceThreshold)
-        {
-            DetectedObject object = { };
-            object.classId = hostBuffers[1][i + 5];
-            object.confidence = confidence;
-
-            BBoxCoordinate b = { };
-            float centerX = hostBuffers[1][i];
-            float centerY = hostBuffers[1][i + 1];
-            float w = hostBuffers[1][i + 2];
-            float h = hostBuffers[1][i + 3];
-            w /= 2;
-            h /= 2;
-
-            b.xMin = (int)round(centerX - w);
-            b.yMin = (int)round(centerY - h);
-            b.xMax = (int)round(centerX + w);
-            b.yMax = (int)round(centerY + h);
-            object.bbox = b;
-
-            objectList.push_back(object);
-        }
+void nms(std::vector<Yolo::Detection>& res, float *output, float conf_thresh, float nms_thresh = 0.5) {
+    int det_size = sizeof(Yolo::Detection) / sizeof(float);
+    std::map<float, std::vector<Yolo::Detection>> m;
+    for (int i = 0; i < output[0] && i < Yolo::MAX_OUTPUT_BBOX_COUNT; i++) {
+        if (output[1 + det_size * i + 4] <= conf_thresh) continue;
+        Yolo::Detection det;
+        memcpy(&det, &output[1 + det_size * i], det_size * sizeof(float));
+        if (m.count(det.class_id) == 0) m.emplace(det.class_id, std::vector<Yolo::Detection>());
+        m[det.class_id].push_back(det);
     }
-
-    // Non-maximum Suppression
-    vector<DetectedObject> ret;
-    sort(objectList.begin(), objectList.end(), cmp);
-    for (int i = 0; i < objectList.size(); i++)
-    {
-        auto& obj = objectList[i];
-        ret.push_back(obj);
-        for (int j = i + 1; j < objectList.size(); j++)
-        {
-            if (iou(&obj.bbox, &objectList[j].bbox) > this->NMS_Threshold)
-            {
-                objectList.erase(objectList.begin() + j);
-                j--;
+    for (auto it = m.begin(); it != m.end(); it++) {
+        //std::cout << it->second[0].class_id << " --- " << std::endl;
+        auto& dets = it->second;
+        std::sort(dets.begin(), dets.end(), cmp);
+        for (size_t m = 0; m < dets.size(); ++m) {
+            auto& item = dets[m];
+            res.push_back(item);
+            for (size_t n = m + 1; n < dets.size(); ++n) {
+                if (iou(item.bbox, dets[n].bbox) > nms_thresh) {
+                    dets.erase(dets.begin() + n);
+                    --n;
+                }
             }
         }
     }
-
-    // rescale letter-boxed bbox coordinates -> coordinates with respect to the origin image
-    float r_w = (float)_modelWidth / (float)originWidth;
-    float r_h = (float)_modelHeight / (float)originHeight;
-    for (DetectedObject& obj : ret)
-    {
-        if (r_h > r_w)
-        {
-            obj.bbox.xMin = (int)((float)obj.bbox.xMin / r_w);
-            obj.bbox.xMax = (int)((float)obj.bbox.xMax / r_w);
-            obj.bbox.yMin = (int)(((float)obj.bbox.yMin - ((float)_modelHeight - r_w * (float)originHeight) / 2) / r_w);
-            obj.bbox.yMax = (int)(((float)obj.bbox.yMax - ((float)_modelHeight - r_w * (float)originHeight) / 2) / r_w);
-        }
-        else
-        {
-            obj.bbox.xMin = (int)(((float)obj.bbox.xMin - ((float)_modelWidth - r_w * (float)originWidth) / 2) / r_w);
-            obj.bbox.xMax = (int)(((float)obj.bbox.xMax - ((float)_modelWidth - r_w * (float)originWidth) / 2) / r_w);
-            obj.bbox.yMin = (int)((float)obj.bbox.yMin / r_h);
-            obj.bbox.yMax = (int)((float)obj.bbox.yMax/ r_h);
-        }
-
-    }
-
-    return ret;
 }
 
-vector<DetectedObject> Yolo5Engine::DoInfer(const Mat &image, float confidenceThreshold) {
+vector<Yolo::Detection>
+Yolo5Engine::PostProcess(float confidenceThreshold, int originWidth, int originHeight) {
+    std::vector<Yolo::Detection> res;
+    nms(res, hostBuffers[1], confidenceThreshold, 0.45);
+    return res;
+}
+
+vector<Yolo::Detection> Yolo5Engine::DoInfer(const Mat &image, float confidenceThreshold) {
     PreProcess(image);
 
     cudaMemcpyAsync(deviceBuffers[0], hostBuffers[0], buffersSizeInBytes[0], cudaMemcpyHostToDevice, _stream);
