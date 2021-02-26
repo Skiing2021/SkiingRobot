@@ -71,6 +71,6 @@ int serialInit(char *serial_path){
     return serial_port;
 }
 
-void sendYawAngleSpeed(char angleSpeed){
+void sendYawAngleSpeed(unsigned char angleSpeed){
     ssize_t _w = write(serial_port, &angleSpeed, 1);
 }

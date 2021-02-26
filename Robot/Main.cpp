@@ -30,7 +30,8 @@ Scalar color_map[2] = {
 int y_sum_origin;
 int color_change;
 int color; // 0-blue; 1-red
-int yaw_speed; //0~127 turn left; -128~-1 turn right;
+unsigned char yaw_speed_tx;
+
 
 struct TargetInfo
 {
@@ -133,7 +134,7 @@ TargetInfo onDetected(vector<Yolo::Detection> objs, Mat frame)
     int y_sum;
     drawMarker(frame, Point(30, 30), color_map[color], MARKER_SQUARE, 10, 10);
     TargetInfo result = findBBoxes(objs, color, y_sum_origin, y_sum, frame);
-
+    int yaw_speed; //0~127 turn left; -128~-1 turn right;
     int center_x = frame.cols / 2;
     if (result.x == 0 && result.y == 0)
     {
@@ -141,16 +142,15 @@ TargetInfo onDetected(vector<Yolo::Detection> objs, Mat frame)
     }
     else
     {
-        yaw_speed = (center_x - result.x) * 0.2;
-        if(yaw_speed > 127)
-        {
-            yaw_speed = 127;
-        }
-        if(yaw_speed < -128)
-        {
-            yaw_speed = -128;
-        }
+        yaw_speed = (center_x - result.x) * 0.3;
     }
+    if(yaw_speed > 127) {
+        yaw_speed = 127;
+    } else if(yaw_speed < -128)
+    {
+        yaw_speed = -128;
+    }
+    yaw_speed_tx = yaw_speed + 128;
 
     if(yaw_speed >= 0){
         cv::arrowedLine(frame, Point(90, 30), Point(50, 30), Scalar(0,0,255), 3, 8, 0, 0.5);
@@ -281,7 +281,7 @@ int main(int argc, char* argv[])
 
 #ifndef WIN32
         // send target info via serial port
-        sendYawAngleSpeed(yaw_speed);
+        sendYawAngleSpeed(yaw_speed_tx);
 #endif
 
         if (video_flag != 0)
