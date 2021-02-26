@@ -30,7 +30,7 @@ Scalar color_map[2] = {
 int y_sum_origin;
 int color_change;
 int color; // 0-blue; 1-red
-int yaw_speed; //-128~-1 turn left; 0~127 turn right
+int yaw_speed; //0~127 turn left; -128~-1 turn right;
 
 struct TargetInfo
 {
@@ -152,10 +152,10 @@ TargetInfo onDetected(vector<Yolo::Detection> objs, Mat frame)
         }
     }
 
-    if(yaw_speed < 0){
-        cv::arrowedLine(frame, Point(frame.cols - 50, 30), Point(frame.cols - 90, 30), Scalar(0,0,255), 3, 0.5);
+    if(yaw_speed >= 0){
+        cv::arrowedLine(frame, Point(90, 30), Point(50, 30), Scalar(0,0,255), 3, 8, 0, 0.5);
     } else{
-        cv::arrowedLine(frame, Point(frame.cols - 50, 30), Point(frame.cols - 10, 30), Scalar(0,0,255), 3, 0.5);
+        cv::arrowedLine(frame, Point(90, 30), Point(140, 30), Scalar(0,0,255), 3, 8, 0, 0.5);
     }
     stringstream stream;
     stream << "y_sum_origin:" << y_sum_origin;
