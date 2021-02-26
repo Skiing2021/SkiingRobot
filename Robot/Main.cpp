@@ -176,9 +176,9 @@ TargetInfo onDetected(vector<Yolo::Detection> objs, Mat frame)
     }
     if(yaw_speed > 127) {
         yaw_speed = 127;
-    } else if(yaw_speed < -128)
+    } else if(yaw_speed < -127)
     {
-        yaw_speed = -128;
+        yaw_speed = -127;
     }
     yaw_speed_tx = yaw_speed + 128;
 
