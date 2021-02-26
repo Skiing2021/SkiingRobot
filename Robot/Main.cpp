@@ -118,7 +118,7 @@ TargetInfo findBBoxes(vector<Yolo::Detection> bboxes, int color, int y, int& y_s
     if (flag)
     {
         info.x = (selected_boxes[0].x + selected_boxes[0].width / 2 + selected_boxes[1].x + selected_boxes[1].width / 2) / 2;
-        info.y = (selected_boxes[0].y + + selected_boxes[0].height / 2 + selected_boxes[1].y + selected_boxes[1].height / 2) / 2;
+        info.y = (selected_boxes[0].y + selected_boxes[0].height / 2 + selected_boxes[1].y + selected_boxes[1].height / 2) / 2;
         y_sum = selected_boxes[0].height + selected_boxes[1].height;
     }
     else
@@ -130,15 +130,27 @@ TargetInfo findBBoxes(vector<Yolo::Detection> bboxes, int color, int y, int& y_s
 
 TargetInfo onDetected(vector<Yolo::Detection> objs, Mat frame)
 {
-    TargetInfo result = { };
     int y_sum;
     drawMarker(frame, Point(30, 30), color_map[color], MARKER_SQUARE, 10, 10);
-    result = findBBoxes(objs, color, y_sum_origin, y_sum, frame);
+    TargetInfo result = findBBoxes(objs, color, y_sum_origin, y_sum, frame);
 
     int center_x = frame.cols / 2;
-    yaw_speed = (center_x - result.x) * 0.2;
-    if(yaw_speed > 127) yaw_speed = 127;
-    if(yaw_speed < -128)yaw_speed = -128;
+    if (result.x == 0 && result.y == 0)
+    {
+        yaw_speed = 0;
+    }
+    else
+    {
+        yaw_speed = (center_x - result.x) * 0.2;
+        if(yaw_speed > 127)
+        {
+            yaw_speed = 127;
+        }
+        if(yaw_speed < -128)
+        {
+            yaw_speed = -128;
+        }
+    }
 
     if(yaw_speed < 0){
         cv::arrowedLine(frame, Point(frame.cols - 50, 30), Point(frame.cols - 90, 30), Scalar(0,0,255), 3, 0.5);
@@ -269,7 +281,7 @@ int main(int argc, char* argv[])
 
 #ifndef WIN32
         // send target info via serial port
-        sendYawAngleSpeed(0);
+        sendYawAngleSpeed(yaw_speed);
 #endif
 
         if (video_flag != 0)
