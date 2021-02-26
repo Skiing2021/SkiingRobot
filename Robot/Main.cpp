@@ -40,6 +40,7 @@ struct TargetInfo
 {
     int x;
     int y;
+    int tar_to_gate_width;
     bool flag;
     Rect b1r;
     Rect b2r;
@@ -113,6 +114,10 @@ TargetInfo findBBoxes(vector<Yolo::Detection> bboxes, int color, int y, int& y_s
                         info.flag = true;
                         info.b1r = b1r;
                         info.b2r = b2r;
+
+//                        if (color == 0){
+//                            info.tar_to_gate_width = info.b2r.x - info.x
+//                        }
                     }
                 }
             }
@@ -121,9 +126,28 @@ TargetInfo findBBoxes(vector<Yolo::Detection> bboxes, int color, int y, int& y_s
 
     if (flag)
     {
-        info.x = (selected_boxes[0].x + selected_boxes[0].width / 2 + selected_boxes[1].x + selected_boxes[1].width / 2) / 2;
+        //info.x = (selected_boxes[0].x + selected_boxes[0].width / 2 + selected_boxes[1].x + selected_boxes[1].width / 2) / 2;
         info.y = (selected_boxes[0].y + selected_boxes[0].height / 2 + selected_boxes[1].y + selected_boxes[1].height / 2) / 2;
+        double center_x1 = selected_boxes[0].x + selected_boxes[0].width / 2;
+        double center_x2 = selected_boxes[1].x + selected_boxes[1].width / 2;
+        if(center_x1 > center_x2){
+            double tmp = center_x1;
+            center_x1 = center_x2;
+            center_x2 = tmp;
+        }
+        if (color){ // Red
+            info.x = center_x1 + (center_x2 - center_x1) * 0.2;
+        } else{ // Blue
+            info.x = center_x1 + (center_x2 - center_x1) * 0.8;
+        }
         y_sum = selected_boxes[0].height + selected_boxes[1].height;
+        if (color == 0){
+//            info.tar_to_gate_width = abs(info.b2r.x - info.x);
+            info.tar_to_gate_width = (selected_boxes[1].x + selected_boxes[1].width / 2);
+        } else{
+//            info.tar_to_gate_width = abs(info.b2r.x - info.x);
+            info.tar_to_gate_width = (selected_boxes[0].x + selected_boxes[0].width / 2);
+        }
     }
     else
     {
@@ -138,14 +162,17 @@ TargetInfo onDetected(vector<Yolo::Detection> objs, Mat frame)
     drawMarker(frame, Point(30, 30), color_map[color], MARKER_SQUARE, 10, 10);
     TargetInfo result = findBBoxes(objs, color, y_sum_origin, y_sum, frame);
     int yaw_speed; //0~127 turn left; -128~-1 turn right;
-    int center_x = frame.cols / 2;
     if (result.x == 0 && result.y == 0)
     {
         yaw_speed = 0;
     }
-    else
+    else if(color) //Red
     {
-        yaw_speed = (center_x - result.x) * 0.3;
+        double frame_target = frame.cols * 0.2;
+        yaw_speed = (frame_target - result.x) * 0.3;
+    } else{ //Blue
+        double frame_target = frame.cols * 0.8;
+        yaw_speed = (frame_target - result.x) * 0.3;
     }
     if(yaw_speed > 127) {
         yaw_speed = 127;
