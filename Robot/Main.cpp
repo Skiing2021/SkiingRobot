@@ -27,6 +27,9 @@ Scalar color_map[2] = {
         Scalar(0, 0, 255)
 };
 
+string save_path;
+long frame_counter = 0;
+
 int y_sum_origin;
 int color_change;
 int color; // 0-blue; 1-red
@@ -241,12 +244,28 @@ int main(int argc, char* argv[])
         {
             video_flag = 2;
         }
+        else if (strcmp("3", argv[2]) == 0)
+        {
+            video_flag = 3;
+        }
 
         if (video_flag != 0)
         {
             std::stringstream filename;
-            filename << argv[3] << "/run_" << get_current_time_and_date() << ".mp4";
-            writer = VideoWriter(filename.str(), VideoWriter::fourcc('M', 'P', '4', 'V'), 30, Size(capture.get(CAP_PROP_FRAME_WIDTH), capture.get(CAP_PROP_FRAME_HEIGHT)));
+            filename << argv[3] << "/run_" << get_current_time_and_date();
+
+            if (video_flag == 1 || video_flag == 2)
+            {
+                filename << ".mp4";
+                save_path = filename.str();
+                writer = VideoWriter(filename.str(), VideoWriter::fourcc('M', 'P', '4', 'V'), 30, Size(capture.get(CAP_PROP_FRAME_WIDTH), capture.get(CAP_PROP_FRAME_HEIGHT)));
+            }
+            else if (video_flag == 3)
+            {
+                filename << "/";
+                save_path = filename.str();
+                filesystem::create_directory(save_path);
+            }
         }
     }
 
@@ -290,7 +309,7 @@ int main(int argc, char* argv[])
             {
                 cv::Rect r = get_rect(frame, result[j].bbox);
 
-                if (video_flag == 1)
+                if (video_flag == 1 || video_flag == 3)
                 {
                     cv::rectangle(frame, r, color_map[(int)result[j].class_id], 2);
                     auto c1 = Point(r.x, r.y);
@@ -304,7 +323,7 @@ int main(int argc, char* argv[])
                 }
             }
 
-            if (video_flag == 1)
+            if (video_flag == 1 || video_flag == 3)
             {
                 if (info.flag)
                 {
@@ -316,7 +335,17 @@ int main(int argc, char* argv[])
             ss << "fps           : " << 1000 / std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
             cv::putText(frame, ss.str(), Point(9, 150), cv::FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 150, 255), 2);
             cv::drawMarker(frame, Point(info.x, info.y), Scalar(0, 255, 0), cv::MARKER_CROSS, 25, 2);
-            writer.write(frame);
+            if (video_flag == 1 || video_flag == 2)
+            {
+                writer.write(frame);
+            }
+            else if (video_flag == 3)
+            {
+                stringstream ss;
+                ss << save_path << frame_counter << ".jpg";
+                frame_counter++;
+                imwrite(ss.str(), frame);
+            }
         }
 
 #ifdef WIN32
@@ -328,7 +357,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-    if (video_flag != 0)
+    if (video_flag == 1 || video_flag == 2)
     {
         writer.release();
     }
