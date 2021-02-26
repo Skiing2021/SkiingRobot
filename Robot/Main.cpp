@@ -31,6 +31,7 @@ int y_sum_origin;
 int color_change;
 int color; // 0-blue; 1-red
 int yaw_speed; //-128~-1 turn left; 0~127 turn right
+unsigned char yaw_speed_tx;
 
 struct TargetInfo
 {
@@ -155,6 +156,8 @@ TargetInfo onDetected(vector<Yolo::Detection> objs, Mat frame)
     stream << "yaw_speed   :" << yaw_speed;
     cv::putText(frame, stream.str(), Point(9, 125), cv::FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 150, 255), 2);
 
+    yaw_speed_tx = yaw_speed + 128;
+
     if(objs.size() > 2){
         if(y_sum != 0){
             if(y_sum > y_sum_origin){
@@ -269,7 +272,7 @@ int main(int argc, char* argv[])
 
 #ifndef WIN32
         // send target info via serial port
-        sendYawAngleSpeed(0);
+        sendYawAngleSpeed(yaw_speed_tx);
 #endif
 
         if (video_flag != 0)
