@@ -167,7 +167,7 @@ TargetInfo onDetected(vector<Yolo::Detection> objs, Mat frame)
     stream << "yaw_speed   :" << yaw_speed;
     cv::putText(frame, stream.str(), Point(9, 125), cv::FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 150, 255), 2);
 
-    if(objs.size() > 2){
+    if(objs.size() >= 2){
         if(y_sum != 0){
             if(y_sum > y_sum_origin){
                 y_sum_origin = y_sum;
@@ -246,7 +246,7 @@ int main(int argc, char* argv[])
         {
             std::stringstream filename;
             filename << argv[3] << "/run_" << get_current_time_and_date() << ".mp4";
-            writer = VideoWriter(filename.str(), VideoWriter::fourcc('M', 'P', '4', 'V'), 30, Size(1280, 720));
+            writer = VideoWriter(filename.str(), VideoWriter::fourcc('M', 'P', '4', 'V'), 30, Size(capture.get(CAP_PROP_FRAME_WIDTH), capture.get(CAP_PROP_FRAME_HEIGHT)));
         }
     }
 
